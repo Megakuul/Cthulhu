@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "lib",
+    srcs = ["main.go"],
+    importpath = "",
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "granit_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/megakuul/cthulhu/granit",
+    visibility = ["//visibility:public"],
+)
