@@ -8,6 +8,7 @@ bazel-testlogs/
 bazel-hypercache/
 bazel-*
 
+
 # Ignore Emacs stuff
 *~
 \#*\#
