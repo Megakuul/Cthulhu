@@ -1,7 +1,29 @@
+/**
+ * Cthulhu System
+ *
+ * Copyright (C) 2024  Linus Ilian Moser <linus.moser@megakuul.ch>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package logger
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 )
 
 var GlobLogger Logger
@@ -11,61 +33,121 @@ const (
 	ERROR LOGLEVEL = iota
 	WARN
 	INFO
-	DEBUG
 )
 
 type Logger struct {
 	logLevel LOGLEVEL
-	logPath string
-	logSize int
+	logFile *os.File
+	logToStd bool
+	logDebug bool
 	logChan chan *logMessage
 }
 
 type logMessage struct {
 	message string
+	runtimeinfo string
 	loglevel LOGLEVEL
 }
 
-func InitLogger(logLevel LOGLEVEL, logPath string, logSize int, logQueueThreshold int) {
+func InitLogger(logLevel LOGLEVEL, logPath string, logToStd bool, logDebug bool, logQueueThreshold int) error {
+	// Create Logfile path if not existent
+	logPathParent, _ := filepath.Split(logPath)
+	if err := os.MkdirAll(logPathParent, 0755); err!=nil {
+		return err
+	}
+	
 	var logger Logger
+	var err error
+	logger.logFile, err = os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0755)
+	if err!=nil {
+		return err
+	}
+
+	logger.logToStd = logToStd
+	logger.logDebug = logDebug
 	logger.logLevel = logLevel
-	// TODO: Test path
-	logger.logPath = logPath
-	logger.logSize = logSize
 	logger.logChan = make(chan *logMessage, logQueueThreshold)
+
+	logger.startLogWorker()
+	
+	return err
+}
+
+func (l* Logger) CloseLogger() {
+	l.closeLogWorker()
+	l.logFile.Close()
 }
 
 func (l* Logger) LogError(msg string) {
-	l.logChan<-&logMessage{msg, ERROR}
+	runtimeinfo := ""
+	if l.logDebug {
+		runtimeinfo = l.getRuntimeInfo(2)
+	}
+	l.logChan<-&logMessage{msg, runtimeinfo, ERROR}
 }
 
 func (l* Logger) LogWarn(msg string) {
-	l.logChan<-&logMessage{msg, WARN}
+	if l.logLevel>ERROR {
+		runtimeinfo := ""
+		if l.logDebug {
+			runtimeinfo = l.getRuntimeInfo(2)
+		}
+		l.logChan<-&logMessage{msg, runtimeinfo, WARN}
+	}
 }
 
 func (l* Logger) LogInfo(msg string) {
-	l.logChan<-&logMessage{msg, INFO}
+	if l.logLevel>WARN {
+		runtimeinfo := ""
+		if l.logDebug {
+			runtimeinfo = l.getRuntimeInfo(2)
+		}
+		l.logChan<-&logMessage{msg, runtimeinfo, INFO}
+	}
 }
 
-func (l* Logger) LogDebug(msg string) {
-	l.logChan<-&logMessage{msg, ERROR}
+func (l* Logger) getRuntimeInfo(initstack int) string {
+	runtimeinfo := "[ RUNTIME INFORMATION ]:\n"
+	stackdepth := initstack
+	
+	for {
+		_, file, line, ok := runtime.Caller(stackdepth)
+		if ok {
+			runtimeinfo += fmt.Sprintf("|-[ CALLER STACK %d ]: Line (%d) File (%s)\n", stackdepth, line, file)
+		} else {
+			break
+		}
+		stackdepth++
+	}
+	return runtimeinfo
 }
 
-func (l* Logger) StartLogWorker() {
+func (l* Logger) log(msg *logMessage) {
+	switch msg.loglevel {
+	// TODO: Parse and write message to the output
+	case ERROR:
+
+	case WARN:
+	case INFO:
+	}
+}
+
+
+func (l* Logger) startLogWorker() {
 	for {
 		select {
 		case msg, ok := <-l.logChan:
 			if ok {
-				// TODO: Build logic like forming the output (maybe also mutex locking btw)
-				// + Adding timestamp
-				fmt.Println(msg.message)
+				l.log(msg)
 			} else {
+				// Exit if channel was closed
 				return
 			}
 		}
 	}
 }
 
-func (l* Logger) CloseLogWorker() {
+func (l* Logger) closeLogWorker() {
+	// Close channel which will cause the logworker to exit
 	close(l.logChan)
 }
