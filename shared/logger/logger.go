@@ -26,8 +26,6 @@ import (
 	"runtime"
 )
 
-var GlobLogger Logger
-
 type LOGLEVEL int
 const (
 	ERROR LOGLEVEL = iota
@@ -35,19 +33,21 @@ const (
 	INFO
 )
 
+type LogMessage struct {
+	message string
+	runtimeinfo string
+	loglevel LOGLEVEL
+}
+
 type Logger struct {
 	logLevel LOGLEVEL
 	logFile *os.File
 	logToStd bool
 	logDebug bool
-	logChan chan *logMessage
+	logChan chan *LogMessage
 }
 
-type logMessage struct {
-	message string
-	runtimeinfo string
-	loglevel LOGLEVEL
-}
+var GlobLogger Logger
 
 func InitLogger(logLevel LOGLEVEL, logPath string, logToStd bool, logDebug bool, logQueueThreshold int) error {
 	// Create Logfile path if not existent
@@ -66,7 +66,7 @@ func InitLogger(logLevel LOGLEVEL, logPath string, logToStd bool, logDebug bool,
 	logger.logToStd = logToStd
 	logger.logDebug = logDebug
 	logger.logLevel = logLevel
-	logger.logChan = make(chan *logMessage, logQueueThreshold)
+	logger.logChan = make(chan *LogMessage, logQueueThreshold)
 
 	logger.startLogWorker()
 	
@@ -81,18 +81,18 @@ func (l* Logger) CloseLogger() {
 func (l* Logger) LogError(msg string) {
 	runtimeinfo := ""
 	if l.logDebug {
-		runtimeinfo = l.getRuntimeInfo(2)
+		runtimeinfo = l.getRuntimeInfo()
 	}
-	l.logChan<-&logMessage{msg, runtimeinfo, ERROR}
+	l.logChan<-&LogMessage{msg, runtimeinfo, ERROR}
 }
 
 func (l* Logger) LogWarn(msg string) {
 	if l.logLevel>ERROR {
 		runtimeinfo := ""
 		if l.logDebug {
-			runtimeinfo = l.getRuntimeInfo(2)
+			runtimeinfo = l.getRuntimeInfo()
 		}
-		l.logChan<-&logMessage{msg, runtimeinfo, WARN}
+		l.logChan<-&LogMessage{msg, runtimeinfo, WARN}
 	}
 }
 
@@ -100,29 +100,22 @@ func (l* Logger) LogInfo(msg string) {
 	if l.logLevel>WARN {
 		runtimeinfo := ""
 		if l.logDebug {
-			runtimeinfo = l.getRuntimeInfo(2)
+			runtimeinfo = l.getRuntimeInfo()
 		}
-		l.logChan<-&logMessage{msg, runtimeinfo, INFO}
+		l.logChan<-&LogMessage{msg, runtimeinfo, INFO}
 	}
 }
 
-func (l* Logger) getRuntimeInfo(initstack int) string {
+func (l* Logger) getRuntimeInfo() string {
 	runtimeinfo := "[ RUNTIME INFORMATION ]:\n"
-	stackdepth := initstack
-	
-	for {
-		_, file, line, ok := runtime.Caller(stackdepth)
-		if ok {
-			runtimeinfo += fmt.Sprintf("|-[ CALLER STACK %d ]: Line (%d) File (%s)\n", stackdepth, line, file)
-		} else {
-			break
-		}
-		stackdepth++
+	_, file, line, ok := runtime.Caller(3)
+	if ok {
+		runtimeinfo += fmt.Sprintf("|-[ LOG CALLER STACK ]: Line (%d) File (%s)\n", line, file)
 	}
 	return runtimeinfo
 }
 
-func (l* Logger) log(msg *logMessage) {
+func (l* Logger) log(msg *LogMessage) {
 	switch msg.loglevel {
 	// TODO: Parse and write message to the output
 	case ERROR:
