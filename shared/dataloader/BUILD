@@ -9,8 +9,8 @@ go_library(
 )
 
 cc_library(
-	name = "cc_dataloader",
-	hdrs = ["logger.hpp"],
+    name = "cc_dataloader",
+    hdrs = ["logger.hpp"],
     copts = ["-std=c++23"],
-	visibility = ["//visibility:public"]
+    visibility = ["//visibility:public"],
 )

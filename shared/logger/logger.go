@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 	"runtime"
 )
 
@@ -44,12 +45,13 @@ type Logger struct {
 	logFile *os.File
 	logToStd bool
 	logDebug bool
+	logChanThreshold int
 	logChan chan *LogMessage
 }
 
 var GlobLogger Logger
 
-func InitLogger(logLevel LOGLEVEL, logPath string, logToStd bool, logDebug bool, logQueueThreshold int) error {
+func InitLogger(logLevel LOGLEVEL, logPath string, logToStd bool, logDebug bool, logQueueSize int8) error {
 	// Create Logfile path if not existent
 	logPathParent, _ := filepath.Split(logPath)
 	if err := os.MkdirAll(logPathParent, 0755); err!=nil {
@@ -66,7 +68,9 @@ func InitLogger(logLevel LOGLEVEL, logPath string, logToStd bool, logDebug bool,
 	logger.logToStd = logToStd
 	logger.logDebug = logDebug
 	logger.logLevel = logLevel
-	logger.logChan = make(chan *LogMessage, logQueueThreshold)
+	// Queue threshold is set to 50%. If it goes beyond, this is already very critical
+	logger.logChanThreshold = int(logQueueSize) / 2
+	logger.logChan = make(chan *LogMessage, logQueueSize)
 
 	logger.startLogWorker()
 	
@@ -81,7 +85,7 @@ func (l* Logger) CloseLogger() {
 func (l* Logger) LogError(msg string) {
 	runtimeinfo := ""
 	if l.logDebug {
-		runtimeinfo = l.getRuntimeInfo()
+		runtimeinfo = l.getRuntimeInfo(2)
 	}
 	l.logChan<-&LogMessage{msg, runtimeinfo, ERROR}
 }
@@ -90,7 +94,7 @@ func (l* Logger) LogWarn(msg string) {
 	if l.logLevel>ERROR {
 		runtimeinfo := ""
 		if l.logDebug {
-			runtimeinfo = l.getRuntimeInfo()
+			runtimeinfo = l.getRuntimeInfo(2)
 		}
 		l.logChan<-&LogMessage{msg, runtimeinfo, WARN}
 	}
@@ -100,15 +104,16 @@ func (l* Logger) LogInfo(msg string) {
 	if l.logLevel>WARN {
 		runtimeinfo := ""
 		if l.logDebug {
-			runtimeinfo = l.getRuntimeInfo()
+			runtimeinfo = l.getRuntimeInfo(2)
 		}
 		l.logChan<-&LogMessage{msg, runtimeinfo, INFO}
 	}
 }
 
-func (l* Logger) getRuntimeInfo() string {
+func (l* Logger) getRuntimeInfo(stackdepth int) string {
 	runtimeinfo := "[ RUNTIME INFORMATION ]:\n"
-	_, file, line, ok := runtime.Caller(3)
+	// Get stack information from the callerstack + stackdepth
+	_, file, line, ok := runtime.Caller(stackdepth+1)
 	if ok {
 		runtimeinfo += fmt.Sprintf("|-[ LOG CALLER STACK ]: Line (%d) File (%s)\n", line, file)
 	}
@@ -116,12 +121,35 @@ func (l* Logger) getRuntimeInfo() string {
 }
 
 func (l* Logger) log(msg *LogMessage) {
+	outstr := time.Now().Format("\n[ 05:04:15 - 02.01.2006 ]\n")
 	switch msg.loglevel {
-	// TODO: Parse and write message to the output
 	case ERROR:
-
+		outstr += "[ ERROR ]:\n"
+		outstr += msg.message
+		outstr += "\n"
+		outstr += msg.runtimeinfo
+		l.logFile.Write([]byte(outstr))
+		if l.logToStd {
+			os.Stderr.Write([]byte(outstr))
+		}
 	case WARN:
+		outstr += "[ WARNING ]:\n"
+		outstr += msg.message
+		outstr += "\n"
+		outstr += msg.runtimeinfo
+		l.logFile.Write([]byte(outstr))
+		if l.logToStd {
+			os.Stderr.Write([]byte(outstr))
+		}
 	case INFO:
+		outstr += "[ INFORMATION ]:\n"
+		outstr += msg.message
+		outstr += "\n"
+		outstr += msg.runtimeinfo
+		l.logFile.Write([]byte(outstr))
+		if l.logToStd {
+			os.Stdout.Write([]byte(outstr))
+		}
 	}
 }
 
@@ -131,6 +159,13 @@ func (l* Logger) startLogWorker() {
 		select {
 		case msg, ok := <-l.logChan:
 			if ok {
+				if len(l.logChan) > l.logChanThreshold {
+					l.log(&LogMessage{
+						"Log Queue is under high pressure!",
+						l.getRuntimeInfo(1),
+						WARN,
+					})
+				}
 				l.log(msg)
 			} else {
 				// Exit if channel was closed
