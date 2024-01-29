@@ -1,4 +1,4 @@
-module github.com/megakuul/cthulhu/shared/dataloader
+module github.com/megakuul/cthulhu
 
 go 1.21.6
 

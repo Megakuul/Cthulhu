@@ -49,8 +49,6 @@ type Logger struct {
 	logChan chan *LogMessage
 }
 
-var GlobLogger Logger
-
 func InitLogger(logLevel LOGLEVEL, logPath string, logToStd bool, logDebug bool, logQueueSize int8) error {
 	// Create Logfile path if not existent
 	logPathParent, _ := filepath.Split(logPath)

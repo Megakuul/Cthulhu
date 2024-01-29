@@ -23,6 +23,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <queue>
+#include <utility>
 
 using namespace std;
 
@@ -36,7 +37,9 @@ template <typename T>
 class chan {
 public:
 	virtual ~chan() {
-
+		unique_lock<mutex> lock(chanMutex);
+		chanCond.notify_all();
+		readerCond.wait(
 	};
 	/**
 	 * Push a value to the chan
@@ -56,12 +59,18 @@ public:
 	 * Important: If you use multiple get() that wait at the same time,
 	 * the thread which gets informed first is "randomly" determined by the OS thread handler.
 	 */
-	T get() {
+	pair<T, bool> get() {
 		unique_lock<mutex> lock(chanMutex);
-		chanCond.wait(lock, [this]{ return !chanQueue.empty(); });
+		readerThreadCount++;
+		chanCond.wait(lock, [this]{ return isChanShut || !chanQueue.empty(); });
+		if (isChanShut) {
+			readerThreadCount--;
+		  readerCond.notify_one();
+			return make_pair(nullptr, false);
+		}
 		T el = move(chanQueue.front());
 		chanQueue.pop();
-		return el;
+		return make_pair(el, true);
 	};
 
 	/**
@@ -75,9 +84,14 @@ public:
 	};
 	
 private:
+	bool isChanShut = false;
+	
 	queue<T> chanQueue;
 	mutex chanMutex;
 	condition_variable chanCond;
+
+	int readerThreadCount = 0;
+	condition_variable readerCond;
 };
 
 #endif

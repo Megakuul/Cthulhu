@@ -5,12 +5,12 @@ cc_library(
     hdrs = ["logger.hpp"],
     copts = ["-std=c++23"],
     visibility = ["//visibility:public"],
-    deps = ["//shared/util:chan"],
+    deps = ["//shared/util:cc_chan"],
 )
 
 go_library(
     name = "logger",
-    srcs = ["logger.go" ],
+    srcs = ["logger.go"],
     importpath = "github.com/megakuul/cthulhu/shared/logger",
     visibility = ["//visibility:public"],
 )

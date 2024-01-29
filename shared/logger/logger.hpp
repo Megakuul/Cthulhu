@@ -21,7 +21,7 @@
 #define LOGGER_H
 
 #include <string>
-#include "chan.hpp"
+#include "shared/util/chan.hpp"
 
 using namespace std;
 
@@ -53,10 +53,8 @@ namespace logger {
 		bool logToStd;
 		bool logDebug;
 		int logChanThreshold;
-		chan logChan;
+		chan<LogMessage> logChan;
 	};
-
-	static Logger GlobLogger;
 };
 
 #endif

@@ -5,7 +5,7 @@ go_library(
     srcs = ["dataloader.go"],
     importpath = "github.com/megakuul/cthulhu/shared/dataloader",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_spf13_viper//:go_default_library"],
+    deps = ["@com_github_spf13_viper//:viper"],
 )
 
 cc_library(
