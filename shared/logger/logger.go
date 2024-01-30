@@ -36,7 +36,7 @@ const (
 
 type LogMessage struct {
 	message string
-	runtimeinfo string
+	debuginfo string
 	loglevel LOGLEVEL
 }
 
@@ -81,41 +81,41 @@ func (l* Logger) CloseLogger() {
 }
 
 func (l* Logger) LogError(msg string) {
-	runtimeinfo := ""
+	debuginfo := ""
 	if l.logDebug {
-		runtimeinfo = l.getRuntimeInfo(2)
+		debuginfo = l.getDebugInfo(2)
 	}
-	l.logChan<-&LogMessage{msg, runtimeinfo, ERROR}
+	l.logChan<-&LogMessage{msg, debuginfo, ERROR}
 }
 
 func (l* Logger) LogWarn(msg string) {
 	if l.logLevel>ERROR {
-		runtimeinfo := ""
+		debuginfo := ""
 		if l.logDebug {
-			runtimeinfo = l.getRuntimeInfo(2)
+			debuginfo = l.getDebugInfo(2)
 		}
-		l.logChan<-&LogMessage{msg, runtimeinfo, WARN}
+		l.logChan<-&LogMessage{msg, debuginfo, WARN}
 	}
 }
 
 func (l* Logger) LogInfo(msg string) {
 	if l.logLevel>WARN {
-		runtimeinfo := ""
+		debuginfo := ""
 		if l.logDebug {
-			runtimeinfo = l.getRuntimeInfo(2)
+			debuginfo = l.getDebugInfo(2)
 		}
-		l.logChan<-&LogMessage{msg, runtimeinfo, INFO}
+		l.logChan<-&LogMessage{msg, debuginfo, INFO}
 	}
 }
 
-func (l* Logger) getRuntimeInfo(stackdepth int) string {
-	runtimeinfo := "[ RUNTIME INFORMATION ]:\n"
+func (l* Logger) getDebugInfo(stackdepth int) string {
+	debuginfo := "[ RUNTIME INFORMATION ]:\n"
 	// Get stack information from the callerstack + stackdepth
 	_, file, line, ok := runtime.Caller(stackdepth+1)
 	if ok {
-		runtimeinfo += fmt.Sprintf("|-[ LOG CALLER STACK ]: Line (%d) File (%s)\n", line, file)
+		debuginfo += fmt.Sprintf("|-[ LOG CALLER STACK ]: Line (%d) File (%s)\n", line, file)
 	}
-	return runtimeinfo
+	return debuginfo
 }
 
 func (l* Logger) log(msg *LogMessage) {
@@ -125,7 +125,8 @@ func (l* Logger) log(msg *LogMessage) {
 		outstr += "[ ERROR ]:\n"
 		outstr += msg.message
 		outstr += "\n"
-		outstr += msg.runtimeinfo
+		outstr += msg.debuginfo
+		outstr += "\n"
 		l.logFile.Write([]byte(outstr))
 		if l.logToStd {
 			os.Stderr.Write([]byte(outstr))
@@ -134,7 +135,8 @@ func (l* Logger) log(msg *LogMessage) {
 		outstr += "[ WARNING ]:\n"
 		outstr += msg.message
 		outstr += "\n"
-		outstr += msg.runtimeinfo
+		outstr += msg.debuginfo
+		outstr += "\n"
 		l.logFile.Write([]byte(outstr))
 		if l.logToStd {
 			os.Stderr.Write([]byte(outstr))
@@ -143,7 +145,8 @@ func (l* Logger) log(msg *LogMessage) {
 		outstr += "[ INFORMATION ]:\n"
 		outstr += msg.message
 		outstr += "\n"
-		outstr += msg.runtimeinfo
+		outstr += msg.debuginfo
+		outstr += "\n"
 		l.logFile.Write([]byte(outstr))
 		if l.logToStd {
 			os.Stdout.Write([]byte(outstr))
@@ -160,7 +163,7 @@ func (l* Logger) startLogWorker() {
 				if len(l.logChan) > l.logChanThreshold {
 					l.log(&LogMessage{
 						"Log Queue is under high pressure!",
-						l.getRuntimeInfo(1),
+						l.getDebugInfo(1),
 						WARN,
 					})
 				}

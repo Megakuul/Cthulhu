@@ -27,71 +27,130 @@
 
 using namespace std;
 
-/**
- * Chan is a simple wrapper around std::queue
- * that allows asynchron access and waiting for new values
- * 
- * Every operation / method can be used asynchron without any synchronisation mechanism
- */
-template <typename T>
-class chan {
-public:
-	virtual ~chan() {
-		unique_lock<mutex> lock(chanMutex);
-		chanCond.notify_all();
-		readerCond.wait(
-	};
+namespace util {
 	/**
-	 * Push a value to the chan
-	 */ 
-	void push(T val) {
-		lock_guard<mutex> lock(chanMutex);
-		chanQueue.push(val);
-		chanCond.notify_one();
-	};
-
-	/**
-	 * Get next value from the chan
+	 * Chan is a simple wrapper around std::queue
+	 * that allows asynchron access and waiting for new value
 	 *
-	 * If no value is in chan, this will suspend the thread
-	 * and block execution until the next value is pushed.
+	 * Chan behaves really simular to a Go chan.
+	 * 
+	 * Every operation / method can be used asynchron without any synchronisation mechanism.
 	 *
-	 * Important: If you use multiple get() that wait at the same time,
-	 * the thread which gets informed first is "randomly" determined by the OS thread handler.
+	 * Close the channel with close() or call the destructor.
 	 */
-	pair<T, bool> get() {
-		unique_lock<mutex> lock(chanMutex);
-		readerThreadCount++;
-		chanCond.wait(lock, [this]{ return isChanShut || !chanQueue.empty(); });
-		if (isChanShut) {
+	template <typename T>
+	class chan {
+	public:
+		virtual ~chan() {
+			// If channel was not shut, shut it now. Note that this is more like a preventFootGun() function
+			// its recommended to close the channel in a controlled manner with close();
+			close();
+		};
+	
+		/**
+		 * Push a value to the chan
+		 *
+		 * If the channel is already closed, it will do nothing.
+		 */ 
+		void push(T val) {
+			lock_guard<mutex> lock(chanMutex);
+			// If channel is shut don't allow anything to be pushed to the queue
+			if (isChanShut) return;
+			// Push value to the queue and notify the chanCond to update one random reader thread
+			// This is the same behavior as you will see in Go channels.
+			chanQueue.push(val);
+			chanCond.notify_one();
+		};
+
+		/**
+		 * Get next value from the chan
+		 *
+		 * If no value is in chan, this will suspend the thread
+		 * and block execution until the next value is pushed.
+		 *
+		 * This will return a pair, which always returns the `value` and a `ok` parameter.
+		 * If everything is fine, the `value` is filled and `ok` is `true`.
+		 * If the channel was closed, `value` is `T()` and `ok` is `false`.
+		 *
+		 * Important: If you use multiple get() that wait at the same time,
+		 * the thread which gets informed is "randomly" determined by the OS thread handler.
+		 */
+		pair<T, bool> get() {
+			unique_lock<mutex> lock(chanMutex);
+			// If get is called while ChanShut, it must be catched here
+			// because if not wait will wait forever (as notify_all() was already called at this point)
+			if (isChanShut) return make_pair(T(), false);
+
+			// Increment reader count
+			readerThreadCount++;
+			// Wait for a chanCond notification, this happens in 2 scenarios, 1. Something is pushed 2. channel is shut
+			chanCond.wait(lock, [this]{ return isChanShut || !chanQueue.empty(); });
+			// Decrement reader count
 			readerThreadCount--;
-		  readerCond.notify_one();
-			return make_pair(nullptr, false);
-		}
-		T el = move(chanQueue.front());
-		chanQueue.pop();
-		return make_pair(el, true);
-	};
+			// If channel is shut, notify closer to check the readerCount
+			if (isChanShut) {
+				readerCond.notify_one();
+				return make_pair(T(), false);
+			}
+			// If something is pushed, pop it from queue and return it
+			T el = move(chanQueue.front());
+			chanQueue.pop();
+			return make_pair(el, true);
+		};
 
-	/**
-	 * Get size of the chan
-	 *
-	 * Important: This operation is not constant and has a small overhead due to a mutex locking
-	 */
-	int size() {
-		lock_guard<mutex> lock(chanMutex);
-		return chanQueue.size();
-	};
-	
-private:
-	bool isChanShut = false;
-	
-	queue<T> chanQueue;
-	mutex chanMutex;
-	condition_variable chanCond;
+		/**
+		 * Close the channel
+		 *
+		 * Closing the channel will send a notification to all threads where a reader is waiting (with *get()*).
+		 * All readers will then return <T(), false> to indicate the channel has closed (simular to a go chan).
+		 *
+		 * The channel is also closed if the object is destructed.
+		 *
+		 * Closing the channel and keeping the object alive will not blow your leg off. This is a controlled operation.
+		 */
+		void close() {
+			unique_lock<mutex> lock(chanMutex);
+			if (isChanShut) return;
+			isChanShut = true;
+			chanCond.notify_all();
+			readerCond.wait(lock, [this]{ return readerThreadCount<=0; });
+		};
 
-	int readerThreadCount = 0;
-	condition_variable readerCond;
-};
+		/**
+		 * Returns the state of the channel
+		 */
+		bool isclosed() {
+			lock_guard<mutex> lock(chanMutex);
+			return isChanShut;
+		};
+
+		/**
+		 * Get size of the chan
+		 *
+		 * Important: This operation is not constant and has a small overhead due to a mutex locking
+		 */
+		int size() {
+			lock_guard<mutex> lock(chanMutex);
+			if (isChanShut) return 0;
+			return chanQueue.size();
+		};
+	
+	private:
+		// Determines the state of the channel
+		bool isChanShut = false;
+
+		// Underlying FIFO datastructur
+		queue<T> chanQueue;
+		// Lock for any operation in chan
+		mutex chanMutex;
+		// Variable for notifying readers if state changed or something is pushed to the structure
+		condition_variable chanCond;
+
+		// Count of waiting readers (suspended threads waiting to be notified)
+		int readerThreadCount = 0;
+		// Variable for notifying the channel after they have been shut
+		condition_variable readerCond;
+	};
+}
 
 #endif
