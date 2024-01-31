@@ -1,3 +1,5 @@
+# gazelle:exclude *.hpp
+
 load("@rules_go//go:def.bzl", "go_library")
 
 cc_library(
@@ -9,7 +11,7 @@ cc_library(
 )
 
 go_library(
-    name = "logger",
+    name = "go_logger",
     srcs = ["logger.go"],
     importpath = "github.com/megakuul/cthulhu/shared/logger",
     visibility = ["//visibility:public"],

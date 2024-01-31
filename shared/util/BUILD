@@ -1,3 +1,5 @@
+# gazelle:exclude *.hpp
+
 cc_library(
     name = "cc_chan",
     hdrs = ["chan.hpp"],

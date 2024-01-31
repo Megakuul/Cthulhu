@@ -25,14 +25,26 @@ import (
 )
 
 type MetaConfig struct {
-	MetaLock sync.RWMutex
-	StoragePath string `mapstructure:"storagepath"`
-	ClusterNodeAddr []string `mapstructure:"clusternodeaddr"`
+	metaLock sync.RWMutex
+	storagePath string `mapstructure:"storagepath"`
+	clusterNodeAddr []string `mapstructure:"clusternodeaddr"`
+}
+
+func (m *MetaConfig) GetStoragePath() string {
+	m.metaLock.Lock()
+	defer m.metaLock.Unlock()
+	return m.storagePath
+}
+
+func (m *MetaConfig) GetClusterNodeAddr() []string {
+	m.metaLock.Lock()
+	defer m.metaLock.Unlock()
+	return m.clusterNodeAddr
 }
 
 func (m *MetaConfig) FetchData() error {
-	m.MetaLock.Lock()
-	defer m.MetaLock.Unlock();
+	m.metaLock.Lock()
+	defer m.metaLock.Unlock();
 
 	if err := viper.ReadInConfig(); err!=nil {
 		return err
