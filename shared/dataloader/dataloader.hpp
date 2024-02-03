@@ -57,8 +57,18 @@ namespace dataloader {
 	 */
 	class MetaConfig {
 	public:
+		/**
+		 * Initializes MetaConfig and creates the config file if not existent
+		 */
 		MetaConfig(string path) {
 			configPath = path;
+			// Generate file path recursively
+			filesystem::path fspath(configPath);
+			if (fspath.has_parent_path()) {
+				filesystem::create_directories(fspath.parent_path());
+			}
+			// Generate file
+			ofstream file(configPath, ios::app);
 		};
 
 		/**
@@ -240,7 +250,7 @@ namespace dataloader {
 					continue;
 				}
 				// Skip space, tab
-				if (isspace(c)) {
+				if (c==' '||c=='\t'||c=='\r') {
 					continue;
 				}
 				// # | / indicate a comment

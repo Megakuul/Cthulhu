@@ -1,6 +1,6 @@
 {
   "lockFileVersion": 3,
-  "moduleFileHash": "2f4b5536e49ff6961f6daf2ca95dc43fa01e6c61ad65c96da6c71b1483feea00",
+  "moduleFileHash": "d72ea4b7b3e82f4831dcc90332b537b7260ef81fbfbdb6695c131fee275cf1be",
   "flags": {
     "cmdRegistries": [
       "https://bcr.bazel.build/"
@@ -33,9 +33,7 @@
             "line": 9,
             "column": 24
           },
-          "imports": {
-            "com_github_spf13_viper": "com_github_spf13_viper"
-          },
+          "imports": {},
           "devImports": [],
           "tags": [
             {
