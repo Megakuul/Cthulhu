@@ -7,12 +7,11 @@ go_library(
     srcs = ["dataloader.go"],
     importpath = "github.com/megakuul/cthulhu/shared/dataloader",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_spf13_viper//:viper"],
 )
 
 cc_library(
     name = "cc_dataloader",
-    hdrs = ["logger.hpp"],
+    hdrs = ["dataloader.hpp"],
     copts = ["-std=c++23"],
     visibility = ["//visibility:public"],
 )
