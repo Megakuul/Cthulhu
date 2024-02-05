@@ -32,6 +32,25 @@ import (
 )
 
 /**
+ * Structure which holds function definitions for specific MetaConfig fields
+ *
+ * The hook function callback is called when the API is called to change the specified MetaConfig field.
+ *
+ * Hooks are expected to bring the system into a state where it operates like
+ * the field was set at application start!
+ */
+type UpdateHooks struct {
+	// Hooks for string fields
+	StringFieldHooks map[string]func(string, string) error
+	// Hooks for bool fields
+	BoolFieldHooks map[string]func(string, bool) error
+	// Hooks for double fields
+	DoubleFieldHooks map[string]func(string, float64) error
+	// Hooks for list fields
+	ListFieldHooks map[string]func(string, []string) error
+}
+
+/**
  * MetaHook is a component to update the MetaConfiguration
  * over a controlled HTTP API
  *
@@ -51,27 +70,6 @@ type MetaHook struct {
 	socketPerm fs.FileMode
 	socketServer *http.Server
 	socketServerMux *http.ServeMux
-}
-
-/**
- * Structure which holds function definitions for specific MetaConfig fields
- *
- * The hook function callback is called when the API is called to change the specified MetaConfig field.
- *
- * Hooks are expected to bring the system into a state where it operates like
- * the field was set at application start!
- *
- * Hooks are also expected to not return until the system is in the updated system.
- */
-type UpdateHooks struct {
-	// Hooks for string fields
-	StringFieldHooks map[string]func(string, string) error
-	// Hooks for bool fields
-	BoolFieldHooks map[string]func(string, bool) error
-	// Hooks for double fields
-	DoubleFieldHooks map[string]func(string, float64) error
-	// Hooks for list fields
-	ListFieldHooks map[string]func(string, []string) error
 }
 
 /**
