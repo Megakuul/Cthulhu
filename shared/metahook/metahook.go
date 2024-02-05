@@ -28,7 +28,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/megakuul/cthulhu/shared/dataloader"
+	"github.com/megakuul/cthulhu/shared/metaconfig"
 )
 
 /**
@@ -45,12 +45,33 @@ import (
  * can manage the MetaConfig at runtime.
  */
 type MetaHook struct {
-	metaConfig *dataloader.MetaConfig
-	updateHookMap map[string]func(string,string) error
+	metaConfig *metaconfig.MetaConfig
+	updateHooks UpdateHooks
 	socketPath string
 	socketPerm fs.FileMode
 	socketServer *http.Server
 	socketServerMux *http.ServeMux
+}
+
+/**
+ * Structure which holds function definitions for specific MetaConfig fields
+ *
+ * The hook function callback is called when the API is called to change the specified MetaConfig field.
+ *
+ * Hooks are expected to bring the system into a state where it operates like
+ * the field was set at application start!
+ *
+ * Hooks are also expected to not return until the system is in the updated system.
+ */
+type UpdateHooks struct {
+	// Hooks for string fields
+	StringFieldHooks map[string]func(string, string) error
+	// Hooks for bool fields
+	BoolFieldHooks map[string]func(string, bool) error
+	// Hooks for double fields
+	DoubleFieldHooks map[string]func(string, float64) error
+	// Hooks for list fields
+	ListFieldHooks map[string]func(string, []string) error
 }
 
 /**
@@ -59,8 +80,8 @@ type MetaHook struct {
 func CreateMetaHook(
 	socketpath string,
 	socketperm fs.FileMode,
-	updatehooks map[string]func(string, string) error,
-	config *dataloader.MetaConfig) (*MetaHook, error) {
+	updatehooks UpdateHooks,
+	config *metaconfig.MetaConfig) (*MetaHook, error) {
 	
 	// Create path recursively
 	parentpath := filepath.Dir(socketpath)
@@ -127,34 +148,34 @@ func (m* MetaHook) Serve() error {
 // Meta Handlers
 
 type metaStringField struct {
-	key string `json:"key"`
-	value string `json:"value"`
+	Key string `json:"key"`
+	Value string `json:"value"`
 }
 
 type metaBoolField struct {
-	key string `json:"key"`
-	value bool `json:"value"`
+	Key string `json:"key"`
+	Value bool `json:"value"`
 }
 
 type metaDoubleField struct {
-	key string `json:"key"`
-	value float64 `json:"value"`
+	Key string `json:"key"`
+	Value float64 `json:"value"`
 }
 
 type metaListField struct {
-	key string `json:"key"`
-	value []string `json:"value"`
+	Key string `json:"key"`
+	Value []string `json:"value"`
 }
 
 type updateRequest struct {
-	stringFields []metaStringField `json:"string_fields"`
-	boolFields []metaBoolField `json:"bool_fields"`
-	doubleFields []metaDoubleField `json:"double_fields"`
-	listFields []metaListField `json:"list_fields"`
+	StringFields []metaStringField `json:"string_fields"`
+	BoolFields []metaBoolField `json:"bool_fields"`
+	DoubleFields []metaDoubleField `json:"double_fields"`
+	ListFields []metaListField `json:"list_fields"`
 }
 
 type updateResponse struct {
-	err []error `json:"err"`
+	Err []error `json:"err"`
 }
 
 /**
@@ -181,40 +202,75 @@ func (m* MetaHook) updateHandler(w http.ResponseWriter, r *http.Request) {
 	var wg sync.WaitGroup
 	
 	// String fields
-	for _,kv := range req.stringFields {
+	for _,kv := range req.StringFields {
 		wg.Add(1)
-		go func() {
+		go func(field metaStringField) {
 			defer wg.Done()
-			m.metaConfig.SetString(&kv.key, &kv.value)
-			hook, exists := m.updateHookMap[kv.key]
+			m.metaConfig.SetString(&field.Key, &field.Value)
+			hook, exists := m.updateHooks.StringFieldHooks[field.Key]
 			if exists {
-				err := hook(kv.key, kv.value)
+				err := hook(field.Key, field.Value)
 				if err!=nil {
 					resMutex.Lock()
-					res.err = append(res.err, err)
+					res.Err = append(res.Err, err)
 					resMutex.Unlock()
 				}
 			}
-		}()
+		}(kv)
 	}
 
-	// TODO: Implement rest here
 	// Bool fields
-	for _,kv := range req.boolFields {
+	for _,kv := range req.BoolFields {
 		wg.Add(1)
-		go func() {
+		go func(field metaBoolField) {
 			defer wg.Done()
-			m.metaConfig.SetBool(&kv.key, &kv.value)
-			hook, exists := m.updateHookMap[kv.key]
+			m.metaConfig.SetBool(&field.Key, &field.Value)
+			hook, exists := m.updateHooks.BoolFieldHooks[field.Key]
 			if exists {
-				err := hook(kv.key, kv.value)
+				err := hook(field.Key, field.Value)
 				if err!=nil {
 					resMutex.Lock()
-					res.err = append(res.err, err)
+					res.Err = append(res.Err, err)
 					resMutex.Unlock()
 				}
 			}
-		}()
+		}(kv)
+	}
+
+	// Double fields
+	for _,kv := range req.DoubleFields {
+		wg.Add(1)
+		go func(field metaDoubleField) {
+			defer wg.Done()
+			m.metaConfig.SetDouble(&field.Key, &field.Value)
+			hook, exists := m.updateHooks.DoubleFieldHooks[field.Key]
+			if exists {
+				err := hook(field.Key, field.Value)
+				if err!=nil {
+					resMutex.Lock()
+					res.Err = append(res.Err, err)
+					resMutex.Unlock()
+				}
+			}
+		}(kv)
+	}
+
+	// List fields
+	for _,kv := range req.ListFields {
+		wg.Add(1)
+		go func(field metaListField) {
+			defer wg.Done()
+			m.metaConfig.SetList(&field.Key, &field.Value)
+			hook, exists := m.updateHooks.ListFieldHooks[field.Key]
+			if exists {
+				err := hook(field.Key, field.Value)
+				if err!=nil {
+					resMutex.Lock()
+					res.Err = append(res.Err, err)
+					resMutex.Unlock()
+				}
+			}
+		}(kv)
 	}
 	
 	w.Header().Set("Content-Type", "application/json")

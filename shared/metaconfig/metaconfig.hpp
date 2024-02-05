@@ -17,8 +17,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef DATALOADER_H
-#define DATALOADER_H
+#ifndef METACONFIG_H
+#define METACONFIG_H
 
 #include <string>
 #include <fstream>
@@ -33,7 +33,7 @@
 
 using namespace std;
 
-namespace dataloader {
+namespace metaconfig {
 
 	/**
 	 * Object holding a inmem configuration
