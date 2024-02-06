@@ -5,7 +5,7 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/megakuul/cthulhu/granit",
     visibility = ["//visibility:private"],
-    deps = ["//shared/dataloader:go_dataloader"],
+    deps = ["//shared/metaconfig:go_metaconfig"],
 )
 
 go_binary(

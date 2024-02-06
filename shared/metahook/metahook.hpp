@@ -70,7 +70,6 @@ namespace metahook {
 		metaconfig::MetaConfig* metaConfig;
 		UpdateHooks updateHooks;
 		string socketPath;
-		FileMod socketPerm;
 		
 	};
 }

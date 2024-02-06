@@ -21,11 +21,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/megakuul/cthulhu/shared/dataloader"
+	"github.com/megakuul/cthulhu/shared/metaconfig"
 	
 )
 
 func main() {
 	fmt.Printf("Hallo")
-	dataloader.CreateMetaConfig("/etc/meta")
+	metaconfig.CreateMetaConfig("/etc/meta")
 }

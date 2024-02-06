@@ -5,5 +5,5 @@ cc_binary(
         "-Iwave/include",
         "-std=c++23",
     ],
-    deps = ["//shared/logger:cc_logger"],
+    deps = ["@boost//:asio_ssl", "//shared/logger:cc_logger"],
 )

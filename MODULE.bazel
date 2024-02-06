@@ -2,13 +2,31 @@ module(
     name = "cthulhu"
 )
 
+# Go
+
+# Load go toolchain from bcr
 bazel_dep(name = "rules_go", version = "0.44.2")
 
+# Load gazelle from bcr
 bazel_dep(name = "gazelle", version = "0.35.0")
 
+# Use gazelle extension to automatically load go deps
 go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(go_mod = "//:go.mod")
 
+# Load go rules from gazelle
 use_repo(
     go_deps
+)
+
+# C++
+
+# Load legacy non-module rules from extensions.bzl
+non_module_dependencies = use_extension("//:deps.bzl", "non_module_dependencies")
+non_module_init_rules = use_extension("//:rules.bzl", "non_module_init_rules")
+
+# Load non-module rules
+use_repo(
+    non_module_dependencies,
+    "boost"
 )

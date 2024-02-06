@@ -36,6 +36,8 @@ import (
  *
  * The hook function callback is called when the API is called to change the specified MetaConfig field.
  *
+ * Every hook is executed synchroniously, make sure they do not use cost-intensive IO operations.
+ *
  * Hooks are expected to bring the system into a state where it operates like
  * the field was set at application start!
  */
@@ -196,79 +198,53 @@ func (m* MetaHook) updateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var res updateResponse
-	var resMutex sync.Mutex
-	var wg sync.WaitGroup
 	
 	// String fields
-	for _,kv := range req.StringFields {
-		wg.Add(1)
-		go func(field metaStringField) {
-			defer wg.Done()
-			m.metaConfig.SetString(&field.Key, &field.Value)
-			hook, exists := m.updateHooks.StringFieldHooks[field.Key]
-			if exists {
-				err := hook(field.Key, field.Value)
-				if err!=nil {
-					resMutex.Lock()
-					res.Err = append(res.Err, err)
-					resMutex.Unlock()
-				}
+	for _,field := range req.StringFields {
+		m.metaConfig.SetString(&field.Key, &field.Value)
+		hook, exists := m.updateHooks.StringFieldHooks[field.Key]
+		if exists {
+			err := hook(field.Key, field.Value)
+			if err!=nil {
+				res.Err = append(res.Err, err)
 			}
-		}(kv)
+		}
 	}
 
 	// Bool fields
-	for _,kv := range req.BoolFields {
-		wg.Add(1)
-		go func(field metaBoolField) {
-			defer wg.Done()
-			m.metaConfig.SetBool(&field.Key, &field.Value)
-			hook, exists := m.updateHooks.BoolFieldHooks[field.Key]
-			if exists {
-				err := hook(field.Key, field.Value)
-				if err!=nil {
-					resMutex.Lock()
-					res.Err = append(res.Err, err)
-					resMutex.Unlock()
-				}
+	for _,field := range req.BoolFields {
+		m.metaConfig.SetBool(&field.Key, &field.Value)
+		hook, exists := m.updateHooks.BoolFieldHooks[field.Key]
+		if exists {
+			err := hook(field.Key, field.Value)
+			if err!=nil {
+				res.Err = append(res.Err, err)
 			}
-		}(kv)
+		}
 	}
 
 	// Double fields
-	for _,kv := range req.DoubleFields {
-		wg.Add(1)
-		go func(field metaDoubleField) {
-			defer wg.Done()
-			m.metaConfig.SetDouble(&field.Key, &field.Value)
-			hook, exists := m.updateHooks.DoubleFieldHooks[field.Key]
-			if exists {
-				err := hook(field.Key, field.Value)
-				if err!=nil {
-					resMutex.Lock()
-					res.Err = append(res.Err, err)
-					resMutex.Unlock()
-				}
+	for _,field := range req.DoubleFields {
+		m.metaConfig.SetDouble(&field.Key, &field.Value)
+		hook, exists := m.updateHooks.DoubleFieldHooks[field.Key]
+		if exists {
+			err := hook(field.Key, field.Value)
+			if err!=nil {
+				res.Err = append(res.Err, err)
 			}
-		}(kv)
+		}
 	}
 
 	// List fields
-	for _,kv := range req.ListFields {
-		wg.Add(1)
-		go func(field metaListField) {
-			defer wg.Done()
-			m.metaConfig.SetList(&field.Key, &field.Value)
-			hook, exists := m.updateHooks.ListFieldHooks[field.Key]
-			if exists {
-				err := hook(field.Key, field.Value)
-				if err!=nil {
-					resMutex.Lock()
-					res.Err = append(res.Err, err)
-					resMutex.Unlock()
-				}
+	for _,field := range req.ListFields {
+		m.metaConfig.SetList(&field.Key, &field.Value)
+		hook, exists := m.updateHooks.ListFieldHooks[field.Key]
+		if exists {
+			err := hook(field.Key, field.Value)
+			if err!=nil {
+				res.Err = append(res.Err, err)
 			}
-		}(kv)
+		}
 	}
 	
 	w.Header().Set("Content-Type", "application/json")
