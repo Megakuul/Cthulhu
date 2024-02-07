@@ -14,4 +14,5 @@ cc_library(
     hdrs = ["metahook.hpp"],
     copts = ["-std=c++23"],
     visibility = ["//visibility:public"],
+    deps = ["@boost//:beast"]
 )

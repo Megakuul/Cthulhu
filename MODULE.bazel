@@ -21,12 +21,9 @@ use_repo(
 
 # C++
 
-# Load legacy non-module rules from extensions.bzl
-non_module_dependencies = use_extension("//:deps.bzl", "non_module_dependencies")
-non_module_init_rules = use_extension("//:rules.bzl", "non_module_init_rules")
+# Load extern archive files
+extern_non_module_dependencies = use_extension("//:extern/deps.bzl", "extern_non_module_dependencies")
 
-# Load non-module rules
-use_repo(
-    non_module_dependencies,
-    "boost"
-)
+# Load extern archives
+use_repo(extern_non_module_dependencies)
+

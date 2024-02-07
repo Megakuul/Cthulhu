@@ -1,6 +1,6 @@
 {
   "lockFileVersion": 3,
-  "moduleFileHash": "4f87250840f58d399fbbc0d2181e323ea4f2e31e9d11a2d20e0d11601e0e3e5a",
+  "moduleFileHash": "1ade556d9f80f97375e5ae14be62561c70ad156343956a1a8b08cb5d3737de4e",
   "flags": {
     "cmdRegistries": [
       "https://bcr.bazel.build/"
@@ -53,34 +53,15 @@
           "hasNonDevUseExtension": true
         },
         {
-          "extensionBzlFile": "@cthulhu//:deps.bzl",
-          "extensionName": "non_module_dependencies",
+          "extensionBzlFile": "@cthulhu//:extern/deps.bzl",
+          "extensionName": "extern_non_module_dependencies",
           "usingModule": "<root>",
           "location": {
             "file": "@@//:MODULE.bazel",
             "line": 25,
-            "column": 40
+            "column": 47
           },
-          "imports": {
-            "boost": "boost"
-          },
-          "devImports": [],
-          "tags": [],
-          "hasDevUseExtension": false,
-          "hasNonDevUseExtension": true
-        },
-        {
-          "extensionBzlFile": "@cthulhu//:rules.bzl",
-          "extensionName": "non_module_init_rules",
-          "usingModule": "<root>",
-          "location": {
-            "file": "@@//:MODULE.bazel",
-            "line": 26,
-            "column": 38
-          },
-          "imports": {
-            "loader": "loader"
-          },
+          "imports": {},
           "devImports": [],
           "tags": [],
           "hasDevUseExtension": false,
@@ -963,31 +944,6 @@
     }
   },
   "moduleExtensions": {
-    "//:deps.bzl%non_module_dependencies": {
-      "general": {
-        "bzlTransitiveDigest": "11/qma4/qdALTIMLwSZy4ESiSA+/4Jfe9WvbD6p5Z0Q=",
-        "accumulatedFileDigests": {},
-        "envVariables": {},
-        "generatedRepoSpecs": {
-          "com_github_nelhage_rules_boost": {
-            "bzlFile": "@@bazel_tools//tools/build_defs/repo:http.bzl",
-            "ruleClassName": "http_archive",
-            "attributes": {
-              "name": "_main~non_module_dependencies~com_github_nelhage_rules_boost",
-              "url": "https://github.com/nelhage/rules_boost/archive/76ed276e0ea602f83d35687084f5f8751ecd2bcb.tar.gz",
-              "strip_prefix": "rules_boost-76ed276e0ea602f83d35687084f5f8751ecd2bcb"
-            }
-          }
-        },
-        "recordedRepoMappingEntries": [
-          [
-            "",
-            "bazel_tools",
-            "bazel_tools"
-          ]
-        ]
-      }
-    },
     "@@apple_support~1.5.0//crosstool:setup.bzl%apple_cc_configure_extension": {
       "general": {
         "bzlTransitiveDigest": "pMLFCYaRPkgXPQ8vtuNkMfiHfPmRBy6QJfnid4sWfv0=",

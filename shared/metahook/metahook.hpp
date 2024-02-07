@@ -23,13 +23,22 @@
 #include <string>
 #include <unordered_map>
 #include <functional>
+#include <boost/beast/core.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/beast/version.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/config.hpp>
 
 #include "shared/metaconfig/metaconfig.hpp"
+
+namespace beast = boost::beast;
+namespace http = beast::http;
+namespace net = boost::asio;
+using tcp = net::ip::tcp;
 
 using namespace std;
 
 namespace metahook {
-
 	/**
 	 * Structure which holds function definitions for specific MetaConfig fields
 	 *
@@ -72,6 +81,8 @@ namespace metahook {
 		string socketPath;
 		
 	};
+
+	
 }
 
 #endif
